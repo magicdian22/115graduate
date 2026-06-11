@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大不同資優歡樂送 - 跨平板即時互動平台</title>
+    
+    <!-- 使用穩定、快速的 CDN，確保所有平板瀏覽器皆能正常執行 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        body {
+            font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background-color: #f3f4f6;
+        }
+        /* 縮放動畫效果 */
+        .pop-in {
+            animation: popIn 0.3s ease-out forwards;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.9); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // 定義問卷題目
+        const questions = {
+          section1: {
+            title: "✨ 同學印象",
+            color: "from-blue-500 to-cyan-500",
+            icon: (
+              <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            ),
+            items: [
+              { id: 'q1_1', label: "講到...， 你會想到他擅長什麼運動？", placeholder: "例如：講到小明，會想到躲避球" },
+              { id: 'q1_2', label: "講到... ，你會想到他的什麼專長？", placeholder: "例如：講到小華，會想到畫畫" },
+              { id: 'q1_3', label: "講到... ，你會想到他的什麼興趣？", placeholder: "例如：講到小美，會想到看課外書" },
+              { id: 'q1_4', label: "講到...，你會想到他擅長什麼科目？", placeholder: "例如：講到小強，會想到數學" }
+            ]
+          },
+          section2: {
+            title: "👑 六年級學長姐之最",
+            color: "from-amber-500 to-yellow-500",
+            icon: (
+              <svg className="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+              </svg>
+            ),
+            items: [
+              { id: 'q2_1', label: "六年級的學長姐在分組活動或遊戲中，誰最具有領導力？", placeholder: "寫下學長姐的名字..." },
+              { id: 'q2_2', label: "六年級的學長姐相處過程中，誰最會照顧人？", placeholder: "寫下學長姐的名字..." },
+              { id: 'q2_3', label: "六年級的學長姐，誰最有喜感？", placeholder: "寫下學長姐的名字..." },
+              { id: 'q2_4', label: "六年級的學長姐，誰最能言善道？", placeholder: "寫下學長姐的名字..." },
+              { id: 'q2_5', label: "六年級的學長姐，誰動手做能力最強？", placeholder: "寫下學長姐的名字..." },
+              { id: 'q2_6', label: "六年級的學長姐，誰邏輯分析推理能力最好？", placeholder: "寫下學長姐的名字..." }
+            ]
+          },
+          section3: {
+            title: "🏫 大同與資優班點滴",
+            color: "from-emerald-500 to-teal-500",
+            icon: (
+              <svg className="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1M19 20a2 2 0 002-2V8a2 2 0 00-2-2h-5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            ),
+            items: [
+              { id: 'q3_1', label: "想到大同國小，你會想到哪一個老師？", placeholder: "老師的名字..." },
+              { id: 'q3_2', label: "講到大同國小，你最喜歡學校哪一個空間？", placeholder: "例如：圖書館、操場..." },
+              { id: 'q3_3', label: "講到資優班，你會想到哪一個領域或科目？", placeholder: "例如：獨立研究、創意思考..." },
+              { id: 'q3_4', label: "到資優班後，做的第一件事是什麼？", placeholder: "你的第一印象或行動..." },
+              { id: 'q3_5', label: "資優班最喜歡的設備或器材？", placeholder: "例如：平板、樂高..." },
+              { id: 'q3_6', label: "哪位老師的經典名言或常講的話？", placeholder: "例如：某老師說的：「...」" }
+            ]
+          }
+        };
+
+        // 雲端資料庫 API 路徑 (使用 kvdb.io 免費雲端桶子)
+        const BUCKET_ID = "tu_datong_gifted_board_2026";
+        const getDbUrl = (room) => `https://kvdb.io/${BUCKET_ID}/${room || 'default'}`;
+
+        function App() {
+          const [roomCode, setRoomCode] = useState('tatong-mad'); // 預設教室代碼
+          const [step, setStep] = useState('login'); // login -> form -> wall
+          const [currentUser, setCurrentUser] = useState('');
+          const [nameInput, setNameInput] = useState('');
+          const [formData, setFormData] = useState({});
+          const [allAnswers, setAllAnswers] = useState([]);
+          const [syncStatus, setSyncStatus] = useState('offline'); // offline, syncing, synced, error
+
+          // 管理員狀態
+          const [isAdmin, setIsAdmin] = useState(false);
+          const [showAdminLogin, setShowAdminLogin] = useState(false);
+          const [adminPassword, setAdminPassword] = useState('');
+          
+          // 編輯狀態
+          const [showAdminEditModal, setShowAdminEditModal] = useState(false);
+          const [editingAnswer, setEditingAnswer] = useState(null);
+          const [editValue, setEditValue] = useState('');
+
+          // 從雲端抓取最新資料
+          const fetchLatestData = async (targetRoom = roomCode) => {
+            if (!targetRoom.trim()) return;
+            setSyncStatus('syncing');
+            try {
+              const response = await fetch(getDbUrl(targetRoom.trim()));
+              if (response.status === 404) {
+                // 如果是新教室代碼，先上傳空的資料結構
+                await saveToCloud([], targetRoom.trim());
+                setAllAnswers([]);
+                setSyncStatus('synced');
+                return;
+              }
+              const data = await response.json();
+              if (Array.isArray(data)) {
+                setAllAnswers(data);
+                setSyncStatus('synced');
+              } else {
+                setAllAnswers([]);
+                setSyncStatus('synced');
+              }
+            } catch (err) {
+              console.error("下載失敗:", err);
+              setSyncStatus('error');
+            }
+          };
+
+          // 儲存資料到雲端
+          const saveToCloud = async (newData, targetRoom = roomCode) => {
+            setSyncStatus('syncing');
+            try {
+              await fetch(getDbUrl(targetRoom.trim()), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newData)
+              });
+              setSyncStatus('synced');
+            } catch (err) {
+              console.error("儲存失敗:", err);
+              setSyncStatus('error');
+            }
+          };
+
+          // 定時輪詢 (每 4 秒自動抓取一次最新資料，確保即時牆同步)
+          useEffect(() => {
+            fetchLatestData();
+            const interval = setInterval(() => {
+              if (step === 'wall') {
+                fetchLatestData();
+              }
+            }, 4000);
+            return () => clearInterval(interval);
+          }, [step, roomCode]);
+
+          // 處理登入/進入
+          const handleLogin = async (e) => {
+            e.preventDefault();
+            const trimmedName = nameInput.trim();
+            const trimmedRoom = roomCode.trim();
+            if (!trimmedName || !trimmedRoom) return;
+
+            setCurrentUser(trimmedName);
+            // 登入時先強制抓取一次該教室的資料
+            setSyncStatus('syncing');
+            try {
+              const response = await fetch(getDbUrl(trimmedRoom));
+              let fetchedAnswers = [];
+              if (response.status !== 404) {
+                fetchedAnswers = await response.json();
+                if (!Array.isArray(fetchedAnswers)) fetchedAnswers = [];
+              }
+              setAllAnswers(fetchedAnswers);
+              setSyncStatus('synced');
+
+              // 檢查該使用者在此教室是否已經有填過
+              const userAnswers = fetchedAnswers.filter(a => a.author === trimmedName);
+              if (userAnswers.length > 0) {
+                // 有填過，自動載入並直接看看板
+                const userFormData = {};
+                userAnswers.forEach(a => {
+                  userFormData[a.qId] = a.answer;
+                });
+                setFormData(userFormData);
+                setStep('wall');
+              } else {
+                // 沒填過，開啟表單
+                setStep('form');
+              }
+            } catch (err) {
+              alert("連線雲端資料庫失敗，請確認網路是否通暢！");
+              setSyncStatus('error');
+            }
+          };
+
+          // 處理修改我的答案
+          const handleEditMyAnswers = () => {
+            const myAnswers = allAnswers.filter(a => a.author === currentUser);
+            const newFormData = {};
+            myAnswers.forEach(a => {
+              newFormData[a.qId] = a.answer;
+            });
+            setFormData(newFormData);
+            setStep('form');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          };
+
+          // 處理表單輸入
+          const handleInputChange = (qId, value) => {
+            setFormData(prev => ({ ...prev, [qId]: value }));
+          };
+
+          // 處理送出
+          const handleSubmitForm = async () => {
+            // 先取得最新雲端資料（避免蓋掉別人的）
+            setSyncStatus('syncing');
+            let latestCloudAnswers = [];
+            try {
+              const response = await fetch(getDbUrl(roomCode));
+              if (response.status !== 404) {
+                latestCloudAnswers = await response.json();
+                if (!Array.isArray(latestCloudAnswers)) latestCloudAnswers = [];
+              }
+            } catch (e) {
+              console.warn("無法取得最新雲端資料，改用本地端進行合併。");
+              latestCloudAnswers = [...allAnswers];
+            }
+
+            // 移除當前使用者在雲端的舊答案，替換成新的
+            const filtered = latestCloudAnswers.filter(a => a.author !== currentUser);
+            
+            const newAnswers = [];
+            Object.entries(formData).forEach(([qId, answer]) => {
+              if (answer && answer.trim() !== '') {
+                newAnswers.push({
+                  id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                  author: currentUser,
+                  qId,
+                  answer: answer.trim(),
+                  timestamp: Date.now()
+                });
+              }
+            });
+
+            const mergedAnswers = [...filtered, ...newAnswers];
+            setAllAnswers(mergedAnswers);
+            await saveToCloud(mergedAnswers);
+            setStep('wall');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          };
+
+          // 管理員登入
+          const handleAdminAuth = (e) => {
+            e.preventDefault();
+            if (adminPassword === 'admin888') {
+              setIsAdmin(true);
+              setShowAdminLogin(false);
+              setAdminPassword('');
+            } else {
+              alert('密碼錯誤！');
+            }
+          };
+
+          // 管理員儲存編輯
+          const handleAdminSave = async () => {
+            if (!editingAnswer) return;
+            let updated;
+            if (editValue.trim() === '') {
+              updated = allAnswers.filter(a => a.id !== editingAnswer.id);
+            } else {
+              updated = allAnswers.map(a => 
+                a.id === editingAnswer.id ? { ...a, answer: editValue.trim() } : a
+              );
+            }
+            setAllAnswers(updated);
+            await saveToCloud(updated);
+            setShowAdminEditModal(false);
+          };
+
+          // 管理員直接刪除
+          const handleAdminDelete = async (id) => {
+            const updated = allAnswers.filter(a => a.id !== id);
+            setAllAnswers(updated);
+            await saveToCloud(updated);
+            setShowAdminEditModal(false);
+          };
+
+          // 檢查特定區塊內是否有作答
+          const sectionHasAnswers = (section) => {
+            return section.items.some(q => allAnswers.some(a => a.qId === q.id && a.answer.trim() !== ''));
+          };
+
+          if (step === 'login') {
+            return (
+              <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center p-4">
+                <div className="bg-white/95 backdrop-blur-md rounded-3xl p-8 max-w-md w-full shadow-2xl border border-white/50 pop-in">
+                  <div className="text-center mb-6">
+                    <div className="bg-gradient-to-tr from-yellow-300 to-amber-500 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                      <span className="text-4xl">🚀</span>
+                    </div>
+                    <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 mb-2">
+                      大不同資優歡樂送
+                    </h1>
+                    <p className="text-gray-500 font-bold text-sm">高雄市大同國小資優班即時互動牆</p>
+                  </div>
+
+                  <form onSubmit={handleLogin} className="space-y-4">
+                    {/* 教室代碼 */}
+                    <div>
+                      <label className="block text-gray-700 font-bold mb-1 text-sm">🏫 教室代碼 (大家要填一樣的哦)</label>
+                      <input
+                        type="text"
+                        required
+                        value={roomCode}
+                        onChange={(e) => setRoomCode(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                        className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all font-bold text-gray-700 text-center text-lg"
+                        placeholder="例如: tatong-mad"
+                      />
+                    </div>
+
+                    {/* 學生姓名 */}
+                    <div>
+                      <label className="block text-gray-700 font-bold mb-1 text-sm">👤 你的真實姓名</label>
+                      <input
+                        type="text"
+                        required
+                        value={nameInput}
+                        onChange={(e) => setNameInput(e.target.value)}
+                        className="w-full px-4 py-3 bg-gray-50 border-2 border-gray-100 rounded-2xl focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all font-bold text-gray-700 text-center text-lg"
+                        placeholder="請輸入姓名 (例如：王小明)"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full mt-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black py-4 rounded-2xl shadow-lg hover:shadow-indigo-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-lg"
+                    >
+                      進 入 課 室 🚀
+                    </button>
+                  </form>
+                </div>
+              </div>
+            );
+          }
+
+          if (step === 'form') {
+            return (
+              <div className="min-h-screen bg-gray-50 pb-24">
+                {/* 頁首 */}
+                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 pt-8 pb-20 px-4 rounded-b-[2.5rem] shadow-lg text-white">
+                  <div className="max-w-3xl mx-auto text-center">
+                    <div className="flex justify-between items-center mb-4 text-xs bg-white/20 px-3 py-1.5 rounded-full inline-flex gap-2">
+                      <span>🏫 教室: <strong className="text-yellow-300">{roomCode}</strong></span>
+                      <span>•</span>
+                      <span>👤 填寫者: <strong className="text-yellow-300">{currentUser}</strong></span>
+                    </div>
+                    <h1 className="text-3xl font-black mb-2">歡樂送填寫站 📝</h1>
+                    <p className="text-indigo-100 text-sm">請寫下你的想法，沒有標準答案，盡情揮灑創意吧！</p>
+                  </div>
+                </div>
+
+                {/* 問題清單 */}
+                <div className="max-w-3xl mx-auto px-4 -mt-12 space-y-8">
+                  {Object.entries(questions).map(([key, section]) => (
+                    <div key={key} className="bg-white rounded-3xl p-6 shadow-xl border border-gray-100 pop-in">
+                      <div className="flex items-center gap-3 mb-6 border-b pb-4">
+                        <div className="bg-indigo-50 p-3 rounded-2xl">
+                          {section.icon}
+                        </div>
+                        <h2 className="text-xl font-black text-gray-800">{section.title}</h2>
+                      </div>
+                      
+                      <div className="space-y-6">
+                        {section.items.map((q, index) => (
+                          <div key={q.id} className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100 hover:border-indigo-200 transition-colors">
+                            <label className="block text-base font-bold text-gray-700 mb-2">
+                              <span className="text-indigo-500 mr-1.5">{index + 1}.</span>{q.label}
+                            </label>
+                            <textarea
+                              placeholder={q.placeholder}
+                              value={formData[q.id] || ''}
+                              onChange={(e) => handleInputChange(q.id, e.target.value)}
+                              className="w-full bg-white border-2 border-gray-100 rounded-xl p-3 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none resize-none h-20 text-gray-700 font-medium"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* 送出按鈕 */}
+                  <div className="sticky bottom-6 flex justify-center z-40">
+                    <button
+                      onClick={handleSubmitForm}
+                      className="bg-gray-900 text-white px-10 py-4 rounded-full font-black text-lg shadow-2xl hover:bg-gray-800 active:scale-95 transition-all flex items-center gap-3 border-4 border-white"
+                    >
+                      <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                      </svg>
+                      寫好囉！送出並前往看板
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div className="min-h-screen bg-slate-100 pb-24">
+              {/* 看板頁首 */}
+              <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 text-white sticky top-0 z-40 shadow-md">
+                <div className="max-w-6xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-white/20 p-2 rounded-xl">
+                      <span className="text-xl">🎉</span>
+                    </div>
+                    <div>
+                      <h1 className="text-xl font-black">大不同歡樂放送局</h1>
+                      <div className="flex items-center gap-1.5 text-xs text-indigo-100">
+                        <span>教室: <strong className="text-yellow-300">{roomCode}</strong></span>
+                        <span>•</span>
+                        {syncStatus === 'syncing' && <span className="text-yellow-300 animate-pulse">● 同步中...</span>}
+                        {syncStatus === 'synced' && <span className="text-emerald-400">● 雲端已同步</span>}
+                        {syncStatus === 'error' && <span className="text-red-400">● 連線不穩</span>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="bg-white/10 px-3 py-1.5 rounded-xl text-xs font-bold">
+                      🧑‍🎓 {currentUser}
+                    </span>
+
+                    {/* 管理員按鈕 */}
+                    <button
+                      onClick={() => isAdmin ? setIsAdmin(false) : setShowAdminLogin(true)}
+                      className={`p-2 rounded-xl text-xs font-bold flex items-center transition-colors ${isAdmin ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-white/10 hover:bg-white/20 text-white'}`}
+                      title={isAdmin ? "退出管理模式" : "管理員密碼解鎖"}
+                    >
+                      {isAdmin ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" /></svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" /></svg>
+                      )}
+                    </button>
+
+                    {/* 手動重整 */}
+                    <button
+                      onClick={() => fetchLatestData()}
+                      className="bg-white/10 hover:bg-white/20 p-2 rounded-xl text-xs font-bold transition-colors"
+                      title="重整同步資料"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 4.75" /></svg>
+                    </button>
+
+                    <button
+                      onClick={handleEditMyAnswers}
+                      className="bg-white text-indigo-700 hover:bg-indigo-50 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 transition-colors shadow-sm"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                      <span>修改答案</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 看板內容 */}
+              <div className="max-w-6xl mx-auto p-4 mt-6">
+                <div className="space-y-8">
+                  {Object.entries(questions).map(([sectionKey, section]) => {
+                    if (!sectionHasAnswers(section)) return null;
+
+                    return (
+                      <div key={sectionKey} className="bg-white rounded-[2rem] p-6 shadow-md border border-gray-100 pop-in">
+                        <div className="flex items-center gap-3 mb-6 pb-2 border-b">
+                          <div className="bg-slate-50 p-3 rounded-2xl">
+                            {section.icon}
+                          </div>
+                          <h2 className="text-2xl font-black text-gray-800">{section.title}</h2>
+                        </div>
+
+                        <div className="space-y-6">
+                          {section.items.map(q => {
+                            const qAnswers = allAnswers.filter(a => a.qId === q.id && a.answer.trim() !== '');
+                            if (qAnswers.length === 0) return null;
+
+                            return (
+                              <div key={q.id} className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                                <h3 className="font-bold text-base text-indigo-950 mb-3 flex items-start gap-1.5">
+                                  <span className="text-indigo-500 mt-1">✦</span> {q.label}
+                                </h3>
+
+                                <div className="flex flex-wrap gap-3">
+                                  {qAnswers.map(ans => (
+                                    <div key={ans.id} className="group relative bg-white border border-slate-200 pl-3 pr-4 py-2 rounded-xl shadow-sm hover:shadow transition-all flex items-center gap-2">
+                                      <span className="font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded text-xs shrink-0">
+                                        {ans.author}
+                                      </span>
+                                      <span className="text-slate-700 font-medium text-sm whitespace-pre-wrap">{ans.answer}</span>
+
+                                      {isAdmin && (
+                                        <button
+                                          onClick={() => {
+                                            setEditingAnswer(ans);
+                                            setEditValue(ans.answer);
+                                            setShowAdminEditModal(true);
+                                          }}
+                                          className="ml-2 p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors shrink-0"
+                                          title="編輯或刪除"
+                                        >
+                                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                        </button>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* 空白提示 */}
+                  {allAnswers.length === 0 && (
+                    <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-slate-100 pop-in">
+                      <span className="text-5xl mb-3 block">💬</span>
+                      <h3 className="text-xl font-bold text-slate-400">目前此教室代碼中還沒有留言喔！</h3>
+                      <p className="text-slate-500 text-sm mt-1">點擊右上角的「修改答案」或用其他平板連進來填寫吧！</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {}
+              {/* 管理員密碼驗證彈窗 */}
+              {showAdminLogin && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+                  <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-bold text-slate-800">🔐 管理員登入</h3>
+                      <button onClick={() => setShowAdminLogin(false)} className="text-slate-400 hover:text-slate-600 p-1 bg-slate-100 rounded-full">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    </div>
+                    <form onSubmit={handleAdminAuth}>
+                      <input
+                        type="password"
+                        placeholder="請輸入密碼 (預設 admin888)"
+                        value={adminPassword}
+                        onChange={e => setAdminPassword(e.target.value)}
+                        className="w-full border-2 border-slate-100 rounded-xl p-3 mb-4 focus:border-indigo-500 outline-none text-center text-lg tracking-widest font-bold"
+                        autoFocus
+                      />
+                      <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition-colors">
+                        解 鎖 🔓
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+              {/* 管理員編輯/刪除彈窗 */}
+              {showAdminEditModal && editingAnswer && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+                  <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md border-t-8 border-indigo-500">
+                    <h3 className="text-lg font-black mb-2 text-slate-800">🛠 動態牆內容修改</h3>
+                    <div className="mb-4 bg-slate-50 p-2.5 rounded-xl text-xs text-slate-600 border border-slate-100">
+                      正在修改學生 <strong className="text-indigo-600">{editingAnswer.author}</strong> 寫的留言
+                    </div>
+                    <textarea
+                      className="w-full border-2 border-slate-100 rounded-xl p-3 focus:border-indigo-500 outline-none resize-none h-24 text-sm text-slate-700 font-medium"
+                      value={editValue}
+                      onChange={e => setEditValue(e.target.value)}
+                    />
+                    <div className="flex justify-between items-center mt-5">
+                      <button 
+                        onClick={() => handleAdminDelete(editingAnswer.id)}
+                        className="flex items-center gap-1 px-3 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-xs font-bold transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        <span>刪除留言</span>
+                      </button>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => setShowAdminEditModal(false)}
+                          className="px-3 py-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-xl text-xs font-bold transition-colors"
+                        >
+                          取消
+                        </button>
+                        <button 
+                          onClick={handleAdminSave}
+                          className="px-5 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-xl text-xs font-bold transition-colors"
+                        >
+                          儲存變更
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        // 渲染主程式
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
